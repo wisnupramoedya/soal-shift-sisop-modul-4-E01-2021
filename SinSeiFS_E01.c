@@ -10,7 +10,7 @@
 #include <time.h>
 #include <unistd.h>
 
-static char *dirpath = "/home/wisnupramoedya/Documents";
+static char *dirpath = "/home/wisnupramoedya/Downloads";
 static char *logpath = "/home/wisnupramoedya/SinSeiFS.log";
 static char *ATOZ = "AtoZ_";
 static char *RX = "RX_";
