@@ -30,7 +30,122 @@ Metode encode pada suatu direktori juga berlaku terhadap direktori yang ada di d
 
 ## Penyelesaian No. 1
 
-### 1.a
+Berdasarkan soal, maka kami membuat beberapa deklarasi dan fungsi.
+
+Deklarasi variable:
+```
+static char *dirpath = "/home/wisnupramoedya/Documents";
+static char *logpath = "/home/wisnupramoedya/SinSeiFS.log";
+static char *ATOZ = "AtoZ_";
+static char *RX = "RX_";
+```
+- ```*dirpath``` merupakan string yang menyimpan path direktori Documents
+- ```*logpath``` merupakan string yang menyimpan path log
+- ```*ATOZ``` string yang menyimpan awalan "AtoZ_" 
+
+Deklarasi fungsi:
+
+Fungsi mengencode setiap char
+```
+void atbash(char *str, int start, int end) {
+    for (int i = start; i < end; i++) {
+        if (str[i] == '/') continue;
+        if (i != start && str[i] == '.') break;
+
+        if (str[i] >= 'A' && str[i] <= 'Z')
+            str[i] = 'Z' + 'A' - str[i];
+        else if (str[i] >= 'a' && str[i] <= 'z')
+            str[i] = 'z' + 'a' - str[i];
+    }
+}
+```
+fungsi ini akan mengecek karakter satu per satu dan dilakukan enkode menggunakan Atbash cipher(mirror)
+
+Fungsi encode string
+```
+void encode_atbash(char *str) {
+    if (!strcmp(str, ".") || !strcmp(str, "..")) return;
+    atbash(str, 0, strlen(str));
+
+    printf("==== enc:atb:%s\n", str);
+}
+```
+Fungsi ini akan digunakan untuk me-encode sebuah string
+
+Fungsi decode string
+```
+void decode_atbash(char *str) {
+    if (!strcmp(str, ".") || !strcmp(str, "..")) return;
+    if (strstr(str, "/") == NULL) return;
+    printf("==== before:%s\n", str);
+    int str_length = strlen(str), s = 0, i;
+    for (i = str_length; i >= 0; i--) {
+        if (str[i] == '/') break;
+
+        if (str[i] == '.') {
+            str_length = i;
+            break;
+        }
+    }
+    for (i = 0; i < str_length; i++) {
+        if (str[i] == '/') {
+            s = i + 1;
+            break;
+        }
+    }
+
+    atbash(str, s, str_length);
+    printf("==== dec:atb:%s\n", str);
+}
+```
+Fungsi ini digunakan untuk decode suatu string
+
+Berikut merupakan fungsi untuk membaca file yang ada dalam suatu direktori
+```
+static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
+                       off_t offset, struct fuse_file_info *fi) {
+    char *enc1 = strstr(path, ATOZ);
+    printf("readdir:%s=enc:%s\n", path, enc1);
+    if (enc1 != NULL) {
+        printf("YEY::readdir:%s\n", path);
+        decode_atbash(enc1);
+    }
+
+    char fpath[1000];
+    if (strcmp(path, "/") == 0) {
+        path = dirpath;
+        sprintf(fpath, "%s", path);
+    } else
+        sprintf(fpath, "%s%s", dirpath, path);
+
+    int res = 0;
+    DIR *dp;
+    struct dirent *de;
+    (void)offset;
+    (void)fi;
+    dp = opendir(fpath);
+    if (dp == NULL) return -errno;
+
+    while ((de = readdir(dp)) != NULL) {
+        struct stat st;
+        memset(&st, 0, sizeof(st));
+        st.st_ino = de->d_ino;
+        st.st_mode = de->d_type << 12;
+
+        if (enc1 != NULL) {
+            encode_atbash(de->d_name);
+            printf("== readdir::encode:%s\n", de->d_name);
+        }
+
+        res = (filler(buf, de->d_name, &st, 0));
+
+        if (res != 0) break;
+    }
+
+    closedir(dp);
+    return 0;
+}
+```
 
 ## Soal No.2
 Selain itu Sei mengusulkan untuk membuat metode enkripsi tambahan agar data pada komputer mereka semakin aman. Berikut rancangan metode enkripsi tambahan yang dirancang oleh Sei:
